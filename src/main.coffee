@@ -18,7 +18,7 @@ DL_ARCH = () ->
 
 DL_PLATFORM = () ->
     switch platform()
-        when 'darwin' then 'darwin'
+        when 'darwin' then 'macos'
         when 'linux' then 'linux'
         when 'win32' then 'windows'
         else throw new Error "unsupported platform #{platform()}"
@@ -95,9 +95,9 @@ class FastfetchPlugin extends ScryptedDeviceBase
 
         if DL_PLATFORM() == 'windows'
             await termsvc_direct.connectStream input,
-                cmd: ['cmd', '/c', "#{await @exe} && timeout /t -1 /nobreak >nul"]
+                cmd: ['cmd', '/c', "\"#{await @exe}\" && timeout /t -1 /nobreak >nul"]
         else
             await termsvc_direct.connectStream input,
-                cmd: ['bash', '-c', "#{await @exe} && while true; do sleep 86400; done"]
+                cmd: ['bash', '-c', "\"#{await @exe}\" && while true; do sleep 86400; done"]
 
 export default FastfetchPlugin
