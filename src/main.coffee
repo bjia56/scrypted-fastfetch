@@ -94,8 +94,16 @@ class FastfetchPlugin extends ScryptedDeviceBase
         termsvc_direct = await sdk.connectRPCObject termsvc
 
         if DL_PLATFORM() == 'windows'
+            exe = await @exe
+            tokens = exe.split path.sep
+            fixed_tokens = tokens.map (token) =>
+                if token.includes ' '
+                    "\"#{token}\""
+                else
+                    token
+            exe = fixed_tokens.join path.sep
             await termsvc_direct.connectStream input,
-                cmd: ['cmd', '/c', "\"#{await @exe}\" && timeout /t -1 /nobreak >nul"]
+                cmd: ['cmd.exe', '/c', "#{exe} && timeout /t -1 /nobreak >nul"]
         else
             await termsvc_direct.connectStream input,
                 cmd: ['bash', '-c', "\"#{await @exe}\" && while true; do sleep 86400; done"]
