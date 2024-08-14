@@ -7,6 +7,8 @@ import { existsSync } from 'fs'
 import { mkdir, readdir, rmdir, chmod } from 'fs/promises'
 import AdmZip from 'adm-zip'
 
+import fastfetch from './fastfetch.json'
+
 DL_ARCH = () ->
     if platform() == 'darwin'
         'universal'
@@ -23,7 +25,7 @@ DL_PLATFORM = () ->
         when 'win32' then 'windows'
         else throw new Error "unsupported platform #{platform()}"
 
-VERSION = "2.20.0"
+VERSION = fastfetch.version
 
 class FastfetchPlugin extends ScryptedDeviceBase
     constructor: (nativeId) ->
