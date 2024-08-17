@@ -2,7 +2,7 @@ import { ScryptedDeviceBase } from '@scrypted/sdk'
 import sdk from '@scrypted/sdk'
 
 import { arch, platform } from 'os'
-import  path from 'path'
+import path from 'path'
 import { existsSync } from 'fs'
 import { mkdir, readdir, rmdir, chmod } from 'fs/promises'
 import AdmZip from 'adm-zip'
@@ -84,6 +84,13 @@ class FastfetchPlugin extends ScryptedDeviceBase
                 readonly: true
             }
         ]
+
+    getTTYSettings: ->
+        {
+            paths: [
+                path.dirname (await @exe)
+            ]
+        }
 
     getDevice: (nativeId) ->
         # Management ui v2's PtyComponent expects the plugin device to implement
