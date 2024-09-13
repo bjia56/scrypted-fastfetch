@@ -2,3 +2,8 @@
 out/
 node_modules/
 dist/*.map
+.vscode
+src
+LICENSE
+coffeesense.config.js
+webpack.nodejs.config.js
