@@ -1,6 +1,6 @@
 {
    "name": "@scrypted/fastfetch",
-   "version": "0.0.24",
+   "version": "0.0.25",
    "description": "Fastfetch system information tool for Scrypted",
    "license": "Apache",
    "keywords": [
