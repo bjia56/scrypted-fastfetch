@@ -155,10 +155,10 @@ class FastfetchPlugin extends ScryptedDeviceBase
                     token
             exe = fixed_tokens.join path.sep
             await termsvc.connectStream input,
-                cmd: ['cmd.exe', '/c', "#{exe} && timeout /t -1 /nobreak >nul"]
+                cmd: ['cmd.exe', '/c', "cls && #{exe} && timeout /t -1 /nobreak >nul"]
         else
             await termsvc.connectStream input,
-                cmd: ['bash', '-c', "\"#{await @exe}\" && while true; do sleep 86400; done"]
+                cmd: ['bash', '-c', "printf '\\033c\\e[3J' && \"#{await @exe}\" && while true; do sleep 86400; done"]
 
 export default FastfetchPlugin
 
