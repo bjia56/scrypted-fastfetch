@@ -80,9 +80,8 @@ class FastfetchPlugin extends ScryptedDeviceBase
 
     discoverDevices: ->
         if sdk.clusterManager
-            for workerId, forkContext of @workers
-                if forkContext
-                    [_, fork] = forkContext
+            for workerId, [_, fork] of @workers
+                if fork
                     fork.worker.terminate()
             @workers = {}
 
@@ -99,7 +98,7 @@ class FastfetchPlugin extends ScryptedDeviceBase
                         ]
                     }
             devices = (device for device in devices when device)
-            @workers[device.nativeId] = null for device in devices
+            @workers[device.nativeId] = [null, null] for device in devices
             await sdk.deviceManager.onDevicesChanged
                 devices: devices
                 providerNativeId: @nativeId
@@ -126,12 +125,13 @@ class FastfetchPlugin extends ScryptedDeviceBase
 
     getDevice: (nativeId) ->
         if nativeId of @workers
-            unless @workers[nativeId]
+            [worker, fork] = @workers[nativeId]
+            unless worker
                 fork = sdk.fork { clusterWorkerId: nativeId }
                 result = await fork.result
                 worker = await result.newFastfetchPlugin nativeId
                 @workers[nativeId] = [worker, fork]
-            @workers[nativeId][0]
+            worker
         else
             # Management ui v2's PtyComponent expects the plugin device to implement
             # DeviceProvider and return the StreamService device via getDevice
@@ -163,7 +163,6 @@ class FastfetchPlugin extends ScryptedDeviceBase
 
 export default FastfetchPlugin
 
-export fork = () ->
-    return {
-        newFastfetchPlugin: (nativeId) -> new FastfetchPlugin nativeId, true,
-    }
+export fork = ->
+    return
+        newFastfetchPlugin: (nativeId) -> new FastfetchPlugin nativeId, true
