@@ -102,7 +102,7 @@ class FastfetchPlugin extends ScryptedDeviceBase
                 devices: devices
                 providerNativeId: @nativeId
 
-            setInterval (() -> @discoverDevices), 60000
+            setTimeout (() -> @discoverDevices), 60000
 
     getSettings: ->
         [
