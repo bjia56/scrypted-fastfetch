@@ -81,8 +81,7 @@ class FastfetchPlugin extends ScryptedDeviceBase
     discoverDevices: ->
         if sdk.clusterManager
             for workerId, [_, fork] of @workers
-                if fork
-                    fork.worker.terminate()
+                fork?.worker.terminate()
             @workers = {}
 
             devices = for workerId, worker of await sdk.clusterManager.getClusterWorkers()
