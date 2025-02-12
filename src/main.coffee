@@ -1,4 +1,4 @@
-import { ScryptedDeviceBase } from '@scrypted/sdk'
+import { ScryptedDeviceBase, ScryptedDeviceType, ScryptedInterface } from '@scrypted/sdk'
 import sdk from '@scrypted/sdk'
 
 import { arch, platform } from 'os'
@@ -28,10 +28,14 @@ DL_PLATFORM = () ->
 VERSION = fastfetch.version
 
 class FastfetchPlugin extends ScryptedDeviceBase
-    constructor: (nativeId) ->
+    constructor: (nativeId, @worker = false) ->
         super nativeId
         @exe = new Promise (resolve, reject) =>
-            @doDownload(resolve).catch(reject)
+            @doDownload resolve
+            .catch reject
+        @workers = {}
+        unless @worker
+            @discoverDevices()
 
     doDownload: (resolve) ->
         url = "https://github.com/fastfetch-cli/fastfetch/releases/download/#{VERSION}/fastfetch-#{DL_PLATFORM()}-#{DL_ARCH()}.zip"
@@ -46,19 +50,19 @@ class FastfetchPlugin extends ScryptedDeviceBase
                 path.join installDir, "fastfetch-#{DL_PLATFORM()}-#{DL_ARCH()}", 'usr', 'bin', 'fastfetch'
 
         unless existsSync installDir
-            console.log "Clearing old fastfetch installations"
+            @console.log "Clearing old fastfetch installations"
             existing = await readdir pluginVolume
             existing.forEach (file) =>
                 if file.startsWith 'fastfetch-'
                     try
-                        await rmdir path.join(pluginVolume, file), { recursive: true }
+                        await rmdir (path.join pluginVolume, file), { recursive: true }
                     catch e
                         console.error e
 
             await mkdir installDir, { recursive: true }
 
-            console.log "Downloading fastfetch"
-            console.log "Using url: #{url}"
+            @console.log "Downloading fastfetch"
+            @console.log "Using url: #{url}"
             response = await fetch url
             unless response.ok
                 throw new Error "failed to download fastfetch: #{response.statusText}"
@@ -71,8 +75,36 @@ class FastfetchPlugin extends ScryptedDeviceBase
         unless DL_PLATFORM() == 'windows'
             await chmod exe, 0o755
 
-        console.log "fastfetch executable: #{exe}"
+        @console.log "fastfetch executable: #{exe}"
         resolve exe
+
+    discoverDevices: ->
+        if sdk.clusterManager
+            for workerId, forkContext of @workers
+                if forkContext
+                    [_, fork] = forkContext
+                    fork.worker.terminate()
+            @workers = {}
+
+            devices = for workerId, worker of await sdk.clusterManager.getClusterWorkers()
+                unless worker.mode == 'server'
+                    {
+                        nativeId: workerId
+                        name: "fastfetch on #{worker.name}"
+                        type: ScryptedDeviceType.API
+                        interfaces: [
+                            ScryptedInterface.StreamService
+                            ScryptedInterface.TTY
+                            ScryptedInterface.Settings
+                        ]
+                    }
+            devices = (device for device in devices when device)
+            @workers[device.nativeId] = null for device in devices
+            await sdk.deviceManager.onDevicesChanged
+                devices: devices
+                providerNativeId: @nativeId
+
+            setInterval (() -> @discoverDevices), 60000
 
     getSettings: ->
         [
@@ -93,14 +125,26 @@ class FastfetchPlugin extends ScryptedDeviceBase
         }
 
     getDevice: (nativeId) ->
-        # Management ui v2's PtyComponent expects the plugin device to implement
-        # DeviceProvider and return the StreamService device via getDevice
-        this
+        if nativeId of @workers
+            unless @workers[nativeId]
+                fork = sdk.fork { clusterWorkerId: nativeId }
+                result = await fork.result
+                worker = await result.newFastfetchPlugin nativeId
+                @workers[nativeId] = [worker, fork]
+            @workers[nativeId][0]
+        else
+            # Management ui v2's PtyComponent expects the plugin device to implement
+            # DeviceProvider and return the StreamService device via getDevice
+            this
 
     connectStream: (input, options) ->
-        core = sdk.systemManager.getDeviceByName('@scrypted/core')
-        termsvc = await core.getDevice('terminalservice')
-        termsvc_direct = await sdk.connectRPCObject termsvc
+        core = sdk.systemManager.getDeviceByName '@scrypted/core'
+        termsvc = await core.getDevice 'terminalservice'
+
+        if @worker
+            termsvc = await termsvc.forkInterface ScryptedInterface.StreamService, { clusterWorkerId: @nativeId }
+        else
+            termsvc = await sdk.connectRPCObject termsvc
 
         if DL_PLATFORM() == 'windows'
             exe = await @exe
@@ -111,10 +155,15 @@ class FastfetchPlugin extends ScryptedDeviceBase
                 else
                     token
             exe = fixed_tokens.join path.sep
-            await termsvc_direct.connectStream input,
+            await termsvc.connectStream input,
                 cmd: ['cmd.exe', '/c', "#{exe} && timeout /t -1 /nobreak >nul"]
         else
-            await termsvc_direct.connectStream input,
+            await termsvc.connectStream input,
                 cmd: ['bash', '-c', "\"#{await @exe}\" && while true; do sleep 86400; done"]
 
 export default FastfetchPlugin
+
+export fork = () ->
+    return {
+        newFastfetchPlugin: (nativeId) -> new FastfetchPlugin nativeId, true,
+    }
