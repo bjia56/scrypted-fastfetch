@@ -36,6 +36,7 @@ class FastfetchPlugin extends ScryptedDeviceBase
         @workers = {}
         unless @worker
             @discoverDevices()
+        @log.a "@scrypted/fastfetch is moving out of the Scrypted npm org to @bjia56/scrypted-fastfetch. Please consider switching to the new plugin. 0.1.14 will be the last version published in the Scrypted npm org."
 
     doDownload: (resolve) ->
         url = "https://github.com/fastfetch-cli/fastfetch/releases/download/#{VERSION}/fastfetch-#{DL_PLATFORM()}-#{DL_ARCH()}.zip"
