@@ -6,6 +6,7 @@ import path from 'path'
 import { existsSync, readFileSync } from 'fs'
 import { mkdir, readdir, rmdir, chmod } from 'fs/promises'
 import AdmZip from 'adm-zip'
+import { createHash } from 'crypto'
 
 import fastfetch from './fastfetch.json'
 
@@ -29,6 +30,7 @@ VERSION = fastfetch.version
 
 X_FASTFETCH_COMPONENT = readFileSync (path.join process.env.SCRYPTED_PLUGIN_VOLUME, 'zip', 'unzipped', 'fs', 'dist', 'x-fastfetch.js'), 'utf-8'
 X_FASTFETCH_COMPONENT_MAP = readFileSync (path.join process.env.SCRYPTED_PLUGIN_VOLUME, 'zip', 'unzipped', 'fs', 'dist', 'x-fastfetch.js.map'), 'utf-8'
+COMPONENT_HASH = createHash('md5').update(X_FASTFETCH_COMPONENT).digest('hex').substring(0, 8)
 
 class FastfetchPlugin extends ScryptedDeviceBase
     constructor: (nativeId, @worker = false) ->
@@ -170,7 +172,7 @@ class FastfetchPlugin extends ScryptedDeviceBase
             name: 'x-fastfetch'
             title: 'Fastfetch'
             scripts: [
-                @baseUrl + "x-fastfetch.js"
+                @baseUrl + "x-fastfetch.js?v=#{COMPONENT_HASH}"
             ]
             layout: 'frame'
             height: "420px"
@@ -181,18 +183,24 @@ class FastfetchPlugin extends ScryptedDeviceBase
             response.send "",
                 code: 302
                 headers:
-                    'Location': @baseUrl + 'x-fastfetch.js'
+                    'Location': @baseUrl + "x-fastfetch.js?v=#{COMPONENT_HASH}"
             return
 
         file = path.basename request.url
+        # Strip query string to get actual filename
+        file = file.split('?')[0]
 
         if file is 'x-fastfetch.js'
             response.send X_FASTFETCH_COMPONENT,
                 contentType: 'application/javascript'
+                headers:
+                    'Cache-Control': 'public, max-age=31536000, immutable'
             return
         if file is 'x-fastfetch.js.map'
             response.send X_FASTFETCH_COMPONENT_MAP,
                 contentType: 'application/json'
+                headers:
+                    'Cache-Control': 'public, max-age=31536000, immutable'
             return
 
         response.send "",
