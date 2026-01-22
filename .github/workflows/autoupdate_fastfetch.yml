@@ -42,10 +42,6 @@ jobs:
           git add src/fastfetch.json
           git commit -m "Update Fastfetch to ${{ env.latest }}"
 
-          cd src/webcomponent
-          npm i
-          cd ../..
-
           npm i
           npm version patch
           npm publish

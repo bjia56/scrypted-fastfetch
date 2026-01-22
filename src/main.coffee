@@ -3,14 +3,14 @@ import sdk from '@scrypted/sdk'
 
 import { arch, platform } from 'os'
 import path from 'path'
-import { existsSync, readFileSync } from 'fs'
+import { existsSync } from 'fs'
 import { mkdir, readdir, rmdir, chmod } from 'fs/promises'
 import AdmZip from 'adm-zip'
 
 import fastfetch from './fastfetch.json'
 
-DL_ARCH = do ->
-    if platform() is 'darwin'
+DL_ARCH = () ->
+    if platform() == 'darwin'
         'universal'
     else
         switch arch()
@@ -18,7 +18,7 @@ DL_ARCH = do ->
             when 'arm64' then 'aarch64'
             else throw new Error "unsupported architecture #{arch()}"
 
-DL_PLATFORM = do ->
+DL_PLATFORM = () ->
     switch platform()
         when 'darwin' then 'macos'
         when 'linux' then 'linux'
@@ -26,9 +26,6 @@ DL_PLATFORM = do ->
         else throw new Error "unsupported platform #{platform()}"
 
 VERSION = fastfetch.version
-
-X_FASTFETCH_COMPONENT = readFileSync (path.join process.env.SCRYPTED_PLUGIN_VOLUME, 'zip', 'unzipped', 'fs', 'dist', 'x-fastfetch.js'), 'utf-8'
-X_FASTFETCH_COMPONENT_MAP = readFileSync (path.join process.env.SCRYPTED_PLUGIN_VOLUME, 'zip', 'unzipped', 'fs', 'dist', 'x-fastfetch.js.map'), 'utf-8'
 
 class FastfetchPlugin extends ScryptedDeviceBase
     constructor: (nativeId, @worker = false) ->
@@ -39,19 +36,18 @@ class FastfetchPlugin extends ScryptedDeviceBase
         @workers = {}
         unless @worker
             @discoverDevices()
-        @baseUrl = "/endpoint/@bjia56/scrypted-fastfetch/public/"
 
     doDownload: (resolve) ->
-        url = "https://github.com/fastfetch-cli/fastfetch/releases/download/#{VERSION}/fastfetch-#{DL_PLATFORM}-#{DL_ARCH}.zip"
+        url = "https://github.com/fastfetch-cli/fastfetch/releases/download/#{VERSION}/fastfetch-#{DL_PLATFORM()}-#{DL_ARCH()}.zip"
 
         pluginVolume = process.env.SCRYPTED_PLUGIN_VOLUME
-        installDir = path.join pluginVolume, "fastfetch-#{VERSION}-#{DL_PLATFORM}-#{DL_ARCH}-1"
+        installDir = path.join pluginVolume, "fastfetch-#{VERSION}-#{DL_PLATFORM()}-#{DL_ARCH()}"
 
         platform_specific_path = ->
-            if DL_PLATFORM is 'windows'
+            if DL_PLATFORM() == 'windows'
                 path.join installDir, 'fastfetch.exe'
             else
-                path.join installDir, "fastfetch-#{DL_PLATFORM}-#{DL_ARCH}", 'usr', 'bin', 'fastfetch'
+                path.join installDir, "fastfetch-#{DL_PLATFORM()}-#{DL_ARCH()}", 'usr', 'bin', 'fastfetch'
 
         unless existsSync installDir
             @console.log "Clearing old fastfetch installations"
@@ -76,7 +72,7 @@ class FastfetchPlugin extends ScryptedDeviceBase
             admZip.extractAllTo installDir, true
 
         exe = platform_specific_path()
-        unless DL_PLATFORM is 'windows'
+        unless DL_PLATFORM() == 'windows'
             await chmod exe, 0o755
 
         @console.log "fastfetch executable: #{exe}"
@@ -89,16 +85,15 @@ class FastfetchPlugin extends ScryptedDeviceBase
             @workers = {}
 
             devices = for workerId, worker of await sdk.clusterManager.getClusterWorkers()
-                unless worker.mode is 'server'
+                unless worker.mode == 'server'
                     {
                         nativeId: workerId
                         name: "fastfetch on #{worker.name}"
                         type: ScryptedDeviceType.API
                         interfaces: [
                             ScryptedInterface.StreamService
+                            ScryptedInterface.TTY
                             ScryptedInterface.Settings
-                            ScryptedInterface.HttpRequestHandler
-                            "WebComponentProvider"
                         ]
                     }
             devices = (device for device in devices when device)
@@ -150,7 +145,7 @@ class FastfetchPlugin extends ScryptedDeviceBase
         else
             termsvc = await sdk.connectRPCObject termsvc
 
-        if DL_PLATFORM is 'windows'
+        if DL_PLATFORM() == 'windows'
             exe = await @exe
             tokens = exe.split path.sep
             fixed_tokens = tokens.map (token) =>
@@ -164,39 +159,6 @@ class FastfetchPlugin extends ScryptedDeviceBase
         else
             await termsvc.connectStream input,
                 cmd: ['bash', '-c', "printf '\\033c\\e[3J' && \"#{await @exe}\" && while true; do sleep 86400; done"]
-
-    getWebComponentClass: ->
-        {
-            name: 'x-fastfetch'
-            title: 'Fastfetch'
-            scripts: [
-                @baseUrl + "x-fastfetch.js"
-            ]
-            layout: 'frame'
-            height: "420px"
-        }
-
-    onRequest: (request, response) ->
-        unless request.isPublicEndpoint
-            response.send "",
-                code: 302
-                headers:
-                    'Location': @baseUrl + 'x-fastfetch.js'
-            return
-
-        file = path.basename request.url
-
-        if file is 'x-fastfetch.js'
-            response.send X_FASTFETCH_COMPONENT,
-                contentType: 'application/javascript'
-            return
-        if file is 'x-fastfetch.js.map'
-            response.send X_FASTFETCH_COMPONENT_MAP,
-                contentType: 'application/json'
-            return
-
-        response.send "",
-            code: 404
 
 export default FastfetchPlugin
 

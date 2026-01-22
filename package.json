@@ -12,8 +12,8 @@
    "scripts": {
       "scrypted-setup-project": "scrypted-setup-project",
       "prescrypted-setup-project": "scrypted-package-json",
-      "build": "cd src/webcomponent && npm run build && cd ../../ && scrypted-webpack",
-      "prepublishOnly": "NODE_ENV=production cd src/webcomponent && npm run build && cd ../../ && scrypted-webpack",
+      "build": "scrypted-webpack",
+      "prepublishOnly": "NODE_ENV=production scrypted-webpack",
       "prescrypted-vscode-launch": "scrypted-webpack",
       "scrypted-vscode-launch": "scrypted-deploy-debug",
       "scrypted-deploy-debug": "scrypted-deploy-debug",
@@ -28,23 +28,13 @@
       "interfaces": [
          "DeviceProvider",
          "StreamService",
+         "TTY",
          "TTYSettings",
-         "Settings",
-         "HttpRequestHandler",
-         "WebComponentProvider"
-      ],
-      "interfaceDescriptors": {
-         "WebComponentProvider": {
-            "name": "WebComponentProvider",
-            "methods": [
-               "getWebComponentClass"
-            ],
-            "properties": []
-         }
-      }
+         "Settings"
+      ]
    },
    "devDependencies": {
-      "@scrypted/sdk": "^0.5.52",
+      "@scrypted/sdk": "^0.3.116",
       "@types/adm-zip": "^0.5.5",
       "coffee-loader": "^5.0.0"
    },
