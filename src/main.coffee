@@ -190,7 +190,7 @@ class FastfetchPlugin extends ScryptedDeviceBase
         file = path.basename request.url
         file = file.split('?')[0]
 
-        response.sendFile (path.join 'dist', file),
+        response.sendFile (path.join process.env.SCRYPTED_PLUGIN_VOLUME, 'zip', 'unzipped', 'fs', 'dist', file),
             headers:
                 'Cache-Control': 'public, max-age=31536000, immutable'
 
