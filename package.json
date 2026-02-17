@@ -3,6 +3,9 @@
    "version": "0.2.16",
    "description": "Fastfetch system information tool for Scrypted",
    "license": "Apache",
+   "repository": {
+      "url": "https://github.com/bjia56/scrypted-fastfetch"
+   },
    "keywords": [
       "scrypted",
       "plugin",
