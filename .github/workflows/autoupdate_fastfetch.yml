@@ -45,6 +45,8 @@ jobs:
 
           npm i
           npm version patch
+
+          git status
           npm publish
 
           git push
