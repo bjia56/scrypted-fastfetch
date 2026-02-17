@@ -13,7 +13,7 @@ permissions:
 jobs:
   check_new_releases:
     name: Check for new releases
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
 
     steps:
       - name: Checkout repository
